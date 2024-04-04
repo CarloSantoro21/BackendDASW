@@ -1,14 +1,24 @@
 let usersArray = []
 
+/*
+async function means that the function can make tasks that take time (like web requests or
+file lectures) without cutting the main execution line. Instead of waiting until a task has
+been completed, the function can continue y manage the task when its done.
+*/
 async function loadData(){
+    //document.querySelector selects the first element that matchs a specified CSS selector
+    //it analyzes the actual html to search for an ID value in a html tag
     let inputUserId = document.querySelector('#userid')
     console.log("value" , inputUserId.value);
     let id = inputUserId.value;
 
+    //Create a string `pathProps` representing the path to which the request will be sent.
+    //if the id has a value, the path will be /id, else, the route will be ?pageSize=10
     let pathProps = id? '/'+id: '?pageSize=10';
 
 
     console.log("inside");
+    // fetch explanation: https://www.youtube.com/watch?v=8mWm8WxBhEY
     let resp = await fetch('/api/users'+pathProps,{
         method :'GET',
         headers: {
@@ -22,7 +32,6 @@ async function loadData(){
     sessionStorage.setItem('users', JSON.stringify(data))
     usersArray=data;
     showUsersTable(data)
-    
 }
 
 

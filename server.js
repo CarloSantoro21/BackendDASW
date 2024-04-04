@@ -12,7 +12,8 @@ function logger(req, res, next){
 
 console.log(__dirname);
 
-app.use(express.static(path.join(__dirname, 'public')))
+//this line uses the middleware express.static to serve static files in the folder "public"
+app.use(express.static(path.join(__dirname, 'public'))) 
 
 //we can read the body through req.body
 app.use(express.json())

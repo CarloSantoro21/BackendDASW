@@ -35,7 +35,10 @@ router.get('/', auth.validateHeader, auth.validateAdmin, (req,res)=>{
         filteredUsers = filteredUsers.filter(u => u.id <= maxId)
     }
 
-    pageSize = pageSize ?? 3
+
+    //Pagination
+    //if it's not specified in the req.query
+    pageSize = pageSize ?? 3 
     pageNumber = pageNumber ?? 1
 
     let minIndex = (pageNumber-1)*pageSize
@@ -45,13 +48,12 @@ router.get('/', auth.validateHeader, auth.validateAdmin, (req,res)=>{
     // pageSize = pageSize? pageSize: 3
 
     if(!req.admin){
+        //returns just an object with the name
         filteredUsers = filteredUsers.map(u => ({name: u.name}))
     }
 
     res.send(filteredUsers)
 })
-
-
 
 router.get('/:uid', (req, res)=>{
     console.log(req.params.id);
@@ -63,7 +65,6 @@ router.get('/:uid', (req, res)=>{
     res.send(user)
 })
 
-
 // this will never be reached
 router.get('/:email', (req, res)=>{
     console.log(req.params.email);
@@ -74,7 +75,6 @@ router.get('/:email', (req, res)=>{
     // }
     res.send({})
 })
-
 
 router.post('/', (req,res)=>{
     console.log(req.body);
@@ -105,7 +105,6 @@ router.post('/', (req,res)=>{
     res.status(400).send({error})
 
 })
-
 
 //updating an existent object
 router.put('/:id', (req,res)=>{
