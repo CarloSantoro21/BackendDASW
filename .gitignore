@@ -1,2 +1,4 @@
+#Not tracking this file
 /node_modules
 node_modules/
+.env

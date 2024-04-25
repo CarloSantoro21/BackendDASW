@@ -6,39 +6,43 @@ file lectures) without cutting the main execution line. Instead of waiting until
 been completed, the function can continue y manage the task when its done.
 */
 async function loadData(){
-    //document.querySelector selects the first element that matchs a specified CSS selector
-    //it analyzes the actual html to search for an ID value in a html tag
-    let inputUserId = document.querySelector('#userid')
-    console.log("value" , inputUserId.value);
-    let id = inputUserId.value;
+  //document.querySelector selects the first element that matchs a specified CSS selector
+  //it analyzes the actual html to search for an ID value in a html tag
+  let inputUserId = document.querySelector('#userid') // searches in the actual html open document
+  console.log("value" , inputUserId.value);
+  let id = inputUserId.value;
 
-    //Create a string `pathProps` representing the path to which the request will be sent.
-    //if the id has a value, the path will be /id, else, the route will be ?pageSize=10
-    let pathProps = id? '/'+id: '?pageSize=10';
+  //Create a string `pathProps` representing the path to which the request will be sent.
+  //if the id has a value, the path will be /id, else, the route will be ?pageSize=10
+  let pathProps = id? '/'+id: '?pageSize=10';
 
 
-    console.log("inside");
-    // fetch explanation: https://www.youtube.com/watch?v=8mWm8WxBhEY
-    let resp = await fetch('/api/users'+pathProps,{
-        method :'GET',
-        headers: {
-            'x-auth':23423
-        }
-    })
+  console.log("inside");
+  // fetch explanation: https://www.youtube.com/watch?v=8mWm8WxBhEY
+  // Basically, await will stop the code until the request (with fetch) to the server is done
+  // fetch is a function that recieves a route where the request will be done, and an object of
+  // options that specifies how the request will be done.
+  let resp = await fetch('/api/users'+pathProps,{ 
+      method :'GET',
+      headers: {
+          'x-auth':23423
+      }
+  })
 
-    console.log(resp.status);
-    let data = await resp.json()
-    console.log(data);
-    sessionStorage.setItem('users', JSON.stringify(data))
-    usersArray=data;
-    showUsersTable(data)
+  console.log("resp.status: ", resp.status);
+  let data = await resp.json() //transform into JSON, it uses await because it takes time
+  console.log(data);
+
+  //SessionStorage is an object that provides storage, when the browser tab or the window is closed the data is erased
+  //setItem is a method of sessionStorage that its used to store data in a key-value format
+  sessionStorage.setItem('users', JSON.stringify(data))
+  usersArray=data;
+  showUsersTable(data)
 }
 
 
 function showUsersTable(userArray) {
-  let html = /*html*/ `
-
-            
+  let html = /*html*/ `  
             <table> 
             <tr> 
                     <th>Name</th>
@@ -58,7 +62,6 @@ function showUsersTable(userArray) {
                             onclick = "editUser('${user.id}')"
                             ><i class="bi bi-pencil-fill"></i>
                         </a>
-
                         <a
                             class="btn btn-primary"
                             href="#"
@@ -66,7 +69,6 @@ function showUsersTable(userArray) {
                             onclick = "deleteUser('${user.id}')"
                             ><i class="bi bi-trash3-fill"></i>
                         </a>
-   
                     </td>
                 </tr>
                 `
@@ -75,6 +77,8 @@ function showUsersTable(userArray) {
             </table>
            `;
 
+  //updates the content of the actual html (index.html) with the html variable created before
+  //it updates in the div that matches the id = "info"
   document.querySelector("#info").innerHTML = html;
 }
 
@@ -99,10 +103,18 @@ function editUser(id){
 
 function deleteUser(id){
     console.log("user to delete: ",id);
+    let userData = usersArray.find(u => u.id == id)
+    //show a confirmation modal with the name of the user to delete
+      //if yes
+        // send the delete request to the server
+          //if deleted show a message "user deleted"
+            //update data (without refresh page)
+          //error: show the error
+
     //https://sweetalert.js.org/
     swal({
         title: "Are you sure?",
-        text: "Once deleted, you will not be able to recover this user record",
+        text: "Once deleted, you will not be able to recover the user: "+userData.name+"record",
         icon: "warning",
         buttons: true,
         dangerMode: true,
@@ -146,6 +158,4 @@ async function storeEditedUser(){
     }
 
     console.log(data);
-
-
 }

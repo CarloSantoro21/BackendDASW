@@ -1,3 +1,6 @@
+const {User} = require('../db/User')
+const jwt = require ('jsonwebtoken')
+
 function validateHeader(req,res, next){
     let header = req.get('x-auth')
     if(!header){
@@ -33,7 +36,27 @@ function requiredAdmin(req,res, next){
 
 } 
 
+function validateToken(req, res, next){
+    let token = req.get('x-token')
+
+    if(!token){
+        res.status(401).send({error: "token is missing"})
+        return;
+    }
+
+    jwt.verify(token, process.env.TOKEN_KEY, (err, decoded)=>{
+        if(err){
+            res.status(401).send({error: err.message})
+            return
+        }
+
+        req.email= decoded.email;
+        req._id = decoded._id;
+        next()
+
+    })
+
+}
 
 
-module.exports = {validateHeader, validateAdmin, requiredAdmin}
-
+module.exports = {validateToken, validateHeader, validateAdmin, requiredAdmin}

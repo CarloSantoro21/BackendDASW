@@ -1,61 +1,65 @@
 const router = require("express").Router()
 const users = require('../data/usersdata.json')
+const {User} = require('../db/User')
 const auth = require('../middlewares/auth')
 const {nanoid} = require('nanoid')
 const fs = require('fs')
+const { password } = require("../db/config")
 
 // console.log(users);
-router.get('/', auth.validateHeader, auth.validateAdmin, (req,res)=>{
+router.get('/', auth.validateHeader, auth.validateAdmin, async (req,res)=>{
     console.log(req.query);
-    // console.log(req.get('x-auth'));
-    // let token = req.get('x-auth')
-    // let admin = false;
-    // if(token == '23423')
-    //     admin = true;
-
-    
-    let filteredUsers = users.slice()
+   
+    let filters = {}
+   
+    // console.log(filteredUsers);
     let {name, email, minId, maxId, pageSize, pageNumber} = req.query;
     console.log(name, email);
-    if(name){
-        filteredUsers = filteredUsers.filter(u => 
-                    u.name.toUpperCase().includes(name.toUpperCase())
-                    )
-    }
-
-    if(email){
-        filteredUsers = filteredUsers.filter(u => 
-                    u.email.toUpperCase().includes(email.toUpperCase())
-                    )
-    }
-    if(minId){
-        filteredUsers = filteredUsers.filter(u => u.id >= minId)
-    }
-    if(maxId){
-        filteredUsers = filteredUsers.filter(u => u.id <= maxId)
-    }
-
-
-    //Pagination
-    //if it's not specified in the req.query
-    pageSize = pageSize ?? 3 
+    
+    pageSize = pageSize ?? 3
     pageNumber = pageNumber ?? 1
 
-    let minIndex = (pageNumber-1)*pageSize
+    if(name){
+        filters.name = new RegExp(name,'i') //  /name/i 
+    }
+    
 
-    filteredUsers = filteredUsers.slice(minIndex, minIndex+pageSize)
+    let filteredUsers = await User.findUsers(filters,req.admin, pageSize, pageNumber )
+    res.send(filteredUsers)
+
+    // if(name){
+    //     filteredUsers = filteredUsers.filter(u => 
+    //                 u.name.toUpperCase().includes(name.toUpperCase())
+    //                 )
+    // }
+
+    // if(email){
+    //     filteredUsers = filteredUsers.filter(u => 
+    //                 u.email.toUpperCase().includes(email.toUpperCase())
+    //                 )
+    // }
+    // if(minId){
+    //     filteredUsers = filteredUsers.filter(u => u.id >= minId)
+    // }
+    // if(maxId){
+    //     filteredUsers = filteredUsers.filter(u => u.id <= maxId)
+    // }
+
+
+    // filteredUsers = filteredUsers.slice(minIndex, minIndex+pageSize)
 
     // pageSize = pageSize? pageSize: 3
 
-    if(!req.admin){
-        //returns just an object with the name
-        filteredUsers = filteredUsers.map(u => ({name: u.name}))
-    }
+    // if(!req.admin){
+    //     filteredUsers = filteredUsers.map(u => ({name: u.name}))
+    // }
 
-    res.send(filteredUsers)
+    
 })
 
-router.get('/:uid', (req, res)=>{
+
+
+router.get('/:uid', auth.validateToken,  (req, res)=>{
     console.log(req.params.id);
     let user = users.find(u=> u.id == req.params.uid )
     if (!user){
@@ -64,6 +68,7 @@ router.get('/:uid', (req, res)=>{
     }
     res.send(user)
 })
+
 
 // this will never be reached
 router.get('/:email', (req, res)=>{
@@ -76,23 +81,26 @@ router.get('/:email', (req, res)=>{
     res.send({})
 })
 
-router.post('/', (req,res)=>{
+
+router.post('/', async (req,res)=>{
     console.log(req.body);
-    let {name, email } = req.body;
+    let {name, email, password } = req.body;
     if( name && name.trim() && email && email.trim() ){
         
-        let user = users.find(u => u.email == email)
+        // let user = users.find(u => u.email == email)
+        let user = await User.findUser(email)
         if(user){
             res.status(400).send({error: 'User exists'})
             return 
         }
 
        
-        let userObj = {name, email, uid: nanoid(6)  }
-        users.push(userObj)
-        fs.writeFileSync('./data/usersdata.json', JSON.stringify(users) )
+        let userObj = {name, email, uid: nanoid(6), password  }
+         let newUser = await User.saveUser(userObj)
+        //users.push(userObj)
+        //fs.writeFileSync('./data/usersdata.json', JSON.stringify(users) )
 
-        res.status(201).send(userObj)
+        res.status(201).send(newUser)
         return
     }
 
@@ -106,10 +114,12 @@ router.post('/', (req,res)=>{
 
 })
 
+
 //updating an existent object
-router.put('/:id', (req,res)=>{
+router.put('/:email', async (req,res)=>{
     //search for the id
-    let user = users.find( u => u.id == req.params.id)
+    // let user = users.find( u => u.id == req.params.id)
+    let user  = await User.findUser(req.params.email)
 
     //if not found 
     if (!user){
@@ -120,33 +130,41 @@ router.put('/:id', (req,res)=>{
        
     //if found
         // update data z
-    let {name, email} = req.body;
+    let {name, password} = req.body;
 
-    if(!name || !email) {
+    if(!name ) {
         res.status(400).send({error: 'name or email are not valid'})
         return
     }
 
     user.name = name;
-    user.email = email;
-    fs.writeFileSync('./data/usersdata.json', JSON.stringify(users) )
-    res.send(user)
+    //user.email = req.params.email;
+    if(!user.password){
+        delete user.password;
+    }
+            
+    let updatedUser = await User.updateUser(user.email, user);
+    //fs.writeFileSync('./data/usersdata.json', JSON.stringify(users) )
+    res.send(updatedUser)
 
         
 })
 
-router.delete('/:id', auth.validateHeader, auth.requiredAdmin, (req, res)=>{
+router.delete('/:email', auth.validateHeader, auth.requiredAdmin, async (req, res)=>{
     // search for the id
-    let pos= users.findIndex(u => u.id == req.params.id)
+    // let pos= users.findIndex(u => u.id == req.params.id)
     
+    let user = await User.findUser(req.params.email)
+
     // if not found return 404
-    if(pos== -1){
+    if(!user){
         res.status(404).send({error: 'User not found'})
         return
     }
 
-    let deletedUser = users.splice(pos,1)
-    fs.writeFileSync('./data/usersdata.json', JSON.stringify(users) )
+    let deletedUser = await User.deleteUser(req.params.email)
+    //let deletedUser = users.splice(pos,1)
+    //fs.writeFileSync('./data/usersdata.json', JSON.stringify(users) )
     res.send({deletedUser})
 })
 
